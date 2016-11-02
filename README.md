@@ -24,7 +24,7 @@ render() {
 
 #### Consuming Trie instance
 ```
-import Search from 'react-trie-search/Trie';
+import Search, {Trie} from 'react-trie-search';
 
 const getter = ({value}) => value;
 
