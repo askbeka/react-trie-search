@@ -29,6 +29,7 @@ import Search, {Trie} from 'react-trie-search';
 const getter = ({value}) => value;
 
 const trie = new Trie([{id: 0, value: 'some value'}, {id: 1, value: 'some value 1'}], getter);
+
 render() {
   return <Search trie={trie} onResult={result => console.log(result)}}/>
 }
