@@ -1,84 +1,100 @@
-export default class Trie {
+import {handleActions, createActions} from 'redux-actions';
 
-    constructor(wordsList) {
-        this._trie = {};
-        if (wordsList && wordsList.length) this.buildTrie(wordsList);
+export const ADD_WORD = 'ADD_WORD';
+export const REMOVE_WORD = 'REMOVE_WORD';
+
+export const actions = createActions(ADD_WORD, REMOVE_WORD);
+
+export default handleActions({
+    [ADD_WORD]: (trie, {payload: {word, k}}) => {
+        const newTrie = new Trie();
+        trie.add(word, k);
+        newTrie._trie = trie._trie;
+        return newTrie;
+    },
+    [REMOVE_WORD]: (trie, {payload: {word, k}}) => {
+        const newTrie = new Trie();
+        trie.remove(word, k);
+        newTrie._trie = trie._trie;
+        return newTrie;
+    }
+}, new Trie())
+
+export class Trie {
+
+    constructor(trie) {
+        this._trie = trie || {};
     }
 
-    find(text) {
-        let result = new Set(),
-            cur = this._trie;
-        var words = text.toLowerCase().split(/\W+/);
-        for (let i = 0; i < words.length; i++) {
-            let word = words[i];
-            if (word.length) {
+    find(word) {
+        let cur = this._trie;
 
-                cur = this._trie;
-                for (let j = 0; j < word.length; j++) {
-                    let letter = word[j];
-                    if (cur[letter]) {
-                        cur = cur[letter];
-                    } else {
-                        return [];
-                    }
-                }
-                this._pre_traverse(cur, (o) => {
-                    if (o.$)  {
-                        if (i > 0) {
-                            let intersection = new Set([...o.$].filter(i => result.has(i)));
-                            result = intersection.size ? intersection : result;
-                        } else {
-                            o.$.forEach(i => result.add(i));
-                        }
-                    }
-                });
+        for (let i = 0; i < word.length; i++) {
+            let letter = word[i];
+            if (cur[letter]) {
+                cur = cur[letter];
+            } else {
+                return [];
             }
         }
 
-        return Array.from(result);
+        let result = {};
+
+        this.preTraverse(cur, (o) => {
+            if (o.$) {
+                Object.keys(o.$).forEach(k => {
+                    result[k] = (result[k] || 0) + o.$[k];
+                })
+            }
+        });
+
+        return result;
     }
 
-    _pre_traverse(cur, callback) {
+    preTraverse(cur, callback) {
         callback(cur);
         Object.keys(cur).forEach(l => {
             if (l !== '$') {
-                this._traverse(cur[l], callback);
+                this.preTraverse(cur[l], callback);
             }
         })
     }
 
-    getWords(cur) {
-    }
+    add(word, k) {
+        let cur = this._trie;
+        const l = word.length;
+        for (let i = 0; i < l; i++) {
 
-    valueOf() {
-        return this.getWords();
-    }
+            let letter = word[i], pos = cur[letter];
 
-    toString() {
-        return this.valueOf().toString();
-    }
-
-    buildTrie(wordsList) {
-        for (let i = 0; i < wordsList.length; i++) {
-            let line = wordsList[i];
-            if (typeof line === 'string') {
-                let words = line.toLowerCase().split(/\W+/);
-                for (let j = 0; j < words.length; j++) {
-                    let word = words[j], cur = this._trie;
-                    for (let k = 0; k < word.length; k++) {
-                        let letter = word[k], pos = cur[letter];
-                        if (pos == null) {
-                            cur = cur[letter] = (k === word.length - 1) ? {$: new Set([i])} : {};
-                        } else if (pos.$ && k === word.length - 1) {
-                            pos.$.add(i);
-                        } else {
-                            cur = cur[letter];
-                        }
-                    }
-                }
+            if (!pos) {
+                cur = cur[letter] = (i === l - 1) ? {$: {[k]: 1}} : {};
+            } else if (pos.$ && i === l - 1) {
+                pos.$[k] = (pos.$[k] || 0) + 1;
             } else {
-                throw new Error(`invalid item: ${line} is not a string`);
+                cur = cur[letter];
             }
         }
+    }
+
+    remove(word, k, index = -1, cur = this._trie) {
+        if (index === word.length - 1) {
+            if (cur.$ && cur.$[k]) {
+                delete cur.$[k];
+                if (this.noKids(cur.$)) {
+                    delete cur.$;
+                }
+                return this.noKids(cur);
+            }
+            return false;
+        } else {
+            if (this.remove(word, k, index + 1, cur[word[index + 1]])) {
+                return (delete cur[word[index + 1]]) && this.noKids(cur);
+            }
+        }
+    }
+
+    noKids(node) {
+        return Object.keys(node).length === 0;
     }
 }
